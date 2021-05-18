@@ -1,5 +1,7 @@
 const graphql = require('graphql');
+const graphqlIsoDate = require('graphql-iso-date');
 const UserAction = require('../models/userAction');
+const parser = require('ua-parser-js');
 
 const { 
     GraphQLObjectType, 
@@ -8,15 +10,26 @@ const {
     GraphQLInt,
     GraphQLSchema, 
     GraphQLList,
-    GraphQLNonNull 
+    GraphQLNonNull
 } = graphql;
+
+const {
+    GraphQLDate,
+    GraphQLTime,
+    GraphQLDateTime
+} = graphqlIsoDate;
 
 const UserActionType = new GraphQLObjectType({
     name: 'UserAction',
     fields: () => ({
         id: { type: GraphQLID },
+        timestamp: { type: GraphQLDateTime},
+        application: { type: GraphQLString },
+        sublocation: { type: GraphQLString },
         description: { type: GraphQLString },
-        operation: { type: GraphQLString }
+        operation: { type: GraphQLString },
+        ip_address: { type: GraphQLString },
+        browser: {type: GraphQLString}
     })
 });
 
@@ -45,13 +58,22 @@ const Mutation = new GraphQLObjectType({
         addUserAction: {
             type: UserActionType,
             args: {
+                application: { type: new GraphQLNonNull(GraphQLString) },
+                sublocation: { type: new GraphQLNonNull(GraphQLString) },
                 description: { type: new GraphQLNonNull(GraphQLString) },
-                operation: { type: new GraphQLNonNull(GraphQLString) }
+                operation: { type: new GraphQLNonNull(GraphQLString) },
+                ip_address: { type: GraphQLString },
+                browser: { type: GraphQLString }
             },
-            resolve(parent, args) {
-                let userAction = new UserAction({
+            resolve(parent, args, context) {
+                const parsedUserAgent = parser(context.headers['user-agent']);
+                const userAction = new UserAction({
+                    application: args.application,
+                    sublocation: args.sublocation,
                     description: args.description,
-                    operation: args.operation
+                    operation: args.operation,
+                    ip_address: context.ip,
+                    browser: parsedUserAgent.browser.name || null
                 });
                 return userAction.save();
             }

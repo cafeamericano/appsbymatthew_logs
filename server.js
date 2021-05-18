@@ -30,7 +30,7 @@ app.use(cors({
 // DB INITIALIZATION ====================================================================
 
 const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost/graphql')
+mongoose.connect(process.env.DB_URI);
 mongoose.connection.once('open', () => {
     console.log('Database connected.');
 });
